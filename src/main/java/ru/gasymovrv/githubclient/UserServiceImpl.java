@@ -10,26 +10,32 @@ import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import ru.gasymovrv.githubclient.dto.Contributor;
 import ru.gasymovrv.githubclient.dto.Repo;
 import ru.gasymovrv.githubclient.dto.User;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class UserServiceImpl implements UserService {
 
   private static final String GET_USERS_URL = "https://api.github.com/users";
   private static final String GET_USER_URL = GET_USERS_URL + "/{0}";
-  private static final String GET_USER_REPOS_URL = GET_USER_URL + "/repos?per_page=5";
+  private static final String GET_USER_REPOS_URL = GET_USER_URL + "/repos?per_page={1}";
   private static final String AUTH_HEADER_NAME = "Authorization";
 
-  private final HttpClient httpClient = HttpClient.newHttpClient();
+  private final int reposLimit;
   private final ObjectMapper objectMapper;
+  private final HttpClient httpClient;
+
+  public UserServiceImpl(ObjectMapper objectMapper, @Value("${limits.repos}") int reposLimit) {
+    this.reposLimit = reposLimit;
+    this.objectMapper = objectMapper;
+    this.httpClient = HttpClient.newHttpClient();
+  }
 
   @Override
   public CompletableFuture<User> getUserByLogin(String login, String basicAuth) {
@@ -80,13 +86,6 @@ public class UserServiceImpl implements UserService {
         });
   }
 
-  @Override
-  public CompletableFuture<User> getUserInFuture() {
-    final User user = new User();
-    user.setName("Petr");
-    return CompletableFuture.completedFuture(user);
-  }
-
   @SneakyThrows
   private User parseUser(String userAsString) {
     return objectMapper.readValue(userAsString, User.class);
@@ -109,7 +108,7 @@ public class UserServiceImpl implements UserService {
   }
 
   private URI createGetUserReposUrl(String login) {
-    return URI.create(MessageFormat.format(GET_USER_REPOS_URL, login));
+    return URI.create(MessageFormat.format(GET_USER_REPOS_URL, login, reposLimit));
   }
 
   private <T> CompletableFuture<List<T>> flip(CompletableFuture<T>[] listOfCf) {

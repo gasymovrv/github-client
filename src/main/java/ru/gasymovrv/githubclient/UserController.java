@@ -17,12 +17,9 @@ public class UserController {
   private final UserService userService;
 
   @GetMapping("/{login}")
-  public CompletableFuture<User> getUser(@PathVariable String login, @RequestHeader("Authorization") String basicAuth) {
+  public CompletableFuture<User> getUser(
+      @PathVariable String login,
+      @RequestHeader("Authorization") String basicAuth) {
     return userService.getUserByLogin(login, basicAuth);
-  }
-
-  @GetMapping("/in-future")
-  public CompletableFuture<User> getUser() {
-    return userService.getUserInFuture();
   }
 }
