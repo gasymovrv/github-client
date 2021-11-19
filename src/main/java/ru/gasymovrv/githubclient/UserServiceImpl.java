@@ -7,7 +7,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.text.MessageFormat;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import lombok.SneakyThrows;
@@ -50,7 +49,7 @@ public class UserServiceImpl implements UserService {
         .thenApply(resp -> parseUserRepos(resp.body()))
         //start getting contributors for every repo
         .thenCompose(repos -> {
-          CompletableFuture<Repo>[] futures = repos
+          var futures = repos
               .stream()
               .map(repo -> httpClient.sendAsync(HttpRequest
                           .newBuilder()
@@ -65,8 +64,7 @@ public class UserServiceImpl implements UserService {
                     }
                     return repo;
                   }))
-              .toList()
-              .toArray(CompletableFuture[]::new);
+              .toList();
           //convert the list of futures with repos to the future with list of repos
           return flip(futures);
         });
@@ -111,8 +109,8 @@ public class UserServiceImpl implements UserService {
     return URI.create(MessageFormat.format(GET_USER_REPOS_URL, login, reposLimit));
   }
 
-  private <T> CompletableFuture<List<T>> flip(CompletableFuture<T>[] listOfCf) {
-    return CompletableFuture.allOf(listOfCf)
-        .thenApply(allCompleted -> Arrays.stream(listOfCf).map(CompletableFuture::join).toList());
+  private <T> CompletableFuture<List<T>> flip(List<CompletableFuture<T>> listOfCf) {
+    return CompletableFuture.allOf(listOfCf.toArray(CompletableFuture[]::new))
+        .thenApply(allCompleted -> listOfCf.stream().map(CompletableFuture::join).toList());
   }
 }
