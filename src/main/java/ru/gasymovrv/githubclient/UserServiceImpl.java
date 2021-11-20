@@ -7,8 +7,11 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.text.MessageFormat;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,7 +36,11 @@ public class UserServiceImpl implements UserService {
   public UserServiceImpl(ObjectMapper objectMapper, @Value("${limits.repos}") int reposLimit) {
     this.reposLimit = reposLimit;
     this.objectMapper = objectMapper;
-    this.httpClient = HttpClient.newHttpClient();
+    ExecutorService executor = Executors.newWorkStealingPool(10); //ForkJoinPool
+    this.httpClient = HttpClient.newBuilder()
+        .connectTimeout(Duration.ofSeconds(10))
+        .executor(executor)
+        .build();
   }
 
   @Override
